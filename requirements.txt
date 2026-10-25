@@ -197,9 +197,9 @@ elementpath==5.1.4 \
     --hash=sha256:3c912a9c41311ac5244c038867670d7c0b0fec0e444813608e5b846dbb3428ac \
     --hash=sha256:5ec8d7bb44b16c98414a6a95e20cb150f3cbfc3cac65edc14773288c7a937376
     # via xmlschema
-enum-tools==0.12.0 \
-    --hash=sha256:13ceb9376a4c5f574a1e7c5f9c8eb7f3d3fbfbb361cc18a738df1a58dfefd460 \
-    --hash=sha256:d69b019f193c7b850b17d9ce18440db7ed62381571409af80ccc08c5218b340a
+enum-tools==0.13.0 \
+    --hash=sha256:0d13335e361d300dc0f8fd82c8cf9951417246f9676144f5ee1761eb690228eb \
+    --hash=sha256:e0112b16767dd08cb94105844b52770eae67ece6f026916a06db4a3d330d2a95
     # via fints
 fints==5.0.1 \
     --hash=sha256:2799e447c7940152ace67bd8984e17deec31cf4461e46f90ad6b12271a64b6ff \
