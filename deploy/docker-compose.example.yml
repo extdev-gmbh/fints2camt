@@ -1,0 +1,41 @@
+# fints2camt with Docker Compose — an example; copy it next to your config.toml and adapt.
+#
+# The service is not a daemon: it runs once and exits. Start it from a timer
+# (deploy/systemd/fints2camt.timer, or the cron line in deploy/cron.example):
+#
+#   docker compose run --rm fints2camt setup      # once, interactively (TAN method, approval)
+#   docker compose run --rm fints2camt check      # validate config, secrets and reachability
+#   docker compose run --rm fints2camt run        # what the timer starts
+#   docker compose run --rm fints2camt approve    # when a run reports "approval needed"
+#
+# Secrets stay on this host: the PIN is a file under ./secrets/ that only the container
+# user may read (`sudo chown 10001:10001 secrets/fints_pin && sudo chmod 400 secrets/fints_pin`).
+# The product id (and target tokens, unless they are files too: `token_file`) come from
+# ./fints2camt.env (chmod 400). Compose passes its values into the container's environment:
+# processes in the container and `docker inspect` (anyone who may use the Docker daemon) see
+# them; a secret file mounted read-only does not show there. Nothing is published, no port is
+# opened.
+
+services:
+  fints2camt:
+    # A released version (pin it; amd64 and arm64). To build from source instead, replace this
+    # line by `build: <path to a checkout of the release tag>`.
+    image: ghcr.io/extdev-gmbh/fints2camt:v0.1.0
+    command: ["run"]
+    restart: "no"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: [/tmp]
+    env_file: [./fints2camt.env]     # FINTS_PRODUCT_ID=..., TARGET_TOKEN=... (never commit it)
+    environment:
+      FINTS2CAMT_CONFIG: /config/config.toml
+    volumes:
+      - ./config.toml:/config/config.toml:ro        # state_file = "/state/state.json"
+      - ./secrets/fints_pin:/run/secrets/fints_pin:ro   # [bank] pin_file = "/run/secrets/fints_pin"
+      # - ./secrets/target_token:/run/secrets/target_token:ro   # target token_file, same chown/chmod
+      - fints2camt-state:/state                     # the only writable place
+      # - ./camt:/data/camt                         # only for a folder target
+
+volumes:
+  fints2camt-state:

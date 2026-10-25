@@ -1,0 +1,16 @@
+# /etc/systemd/system/fints2camt.timer — start fints2camt.service every morning.
+#
+#   systemctl daemon-reload && systemctl enable --now fints2camt.timer
+#   systemctl list-timers fints2camt.timer
+#   journalctl -u fints2camt.service
+
+[Unit]
+Description=Daily fints2camt run
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

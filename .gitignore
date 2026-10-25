@@ -1,0 +1,19 @@
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.pip-cache/
+build/
+dist/
+
+# --- Secrets / env ---
+.env
+
+# --- Logs ---
+*.log
+
+# --- Never commit real bank data, statements, state files or credentials ---
+tests/fixtures/*RAW*

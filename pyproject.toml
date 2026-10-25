@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fints2camt"
+dynamic = ["version"]
+description = "Fetch bank transactions via FinTS, produce camt.053 and deliver them to a configurable target."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+dependencies = [
+    "fints==5.0.1",
+    "httpx==0.28.1",
+    "lxml==6.1.3",
+]
+
+[project.scripts]
+fints2camt = "fints2camt.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "fints2camt.__version__" }
+
+[tool.setuptools.package-data]
+fints2camt = ["schemas/*.xsd"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

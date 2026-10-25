@@ -1,0 +1,4 @@
+# fints2camt from cron instead of the systemd timer — one run every morning at 06:30.
+# Install with `crontab -e` for the user that may run Docker; adjust the directory.
+# The summary line goes to the log file, details (stderr) too; never PIN or tokens.
+30 6 * * * cd /opt/fints2camt && docker compose run --rm --no-TTY fints2camt run >> /var/log/fints2camt.log 2>&1

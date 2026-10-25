@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.08">
+  <BkToCstmrAcctRpt>
+    <GrpHdr>
+      <MsgId>SYNTHETIC-0002</MsgId>
+      <CreDtTm>2026-10-24T18:00:00+02:00</CreDtTm>
+    </GrpHdr>
+    <Rpt>
+      <Id>SYNTHETIC-RPT-0002</Id>
+      <CreDtTm>2026-10-24T18:00:00+02:00</CreDtTm>
+      <Acct>
+        <Id><IBAN>DE89370400440532013000</IBAN></Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+      <Ntry>
+        <NtryRef>BANK-REF-1</NtryRef>
+        <Amt Ccy="EUR">300.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-10-24</Dt></BookgDt>
+        <ValDt><Dt>2026-10-24</Dt></ValDt>
+        <AcctSvcrRef>9000000003</AcctSvcrRef>
+        <BkTxCd>
+          <Domn><Cd>PMNT</Cd><Fmly><Cd>ICDT</Cd><SubFmlyCd>ESCT</SubFmlyCd></Fmly></Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <Btch><NbOfTxs>2</NbOfTxs></Btch>
+          <TxDtls>
+            <Refs><EndToEndId>PAY-1</EndToEndId></Refs>
+            <Amt Ccy="EUR">100.00</Amt>
+            <RltdPties>
+              <Cdtr><Pty><Nm>Erika Mustermann</Nm></Pty></Cdtr>
+              <CdtrAcct><Id><IBAN>DE04300000000005555555</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RltdAgts><CdtrAgt><FinInstnId><BICFI>DEUTDEFFXXX</BICFI></FinInstnId></CdtrAgt></RltdAgts>
+            <RmtInf><Ustrd>Lohn Oktober</Ustrd></RmtInf>
+          </TxDtls>
+          <TxDtls>
+            <Refs><EndToEndId>PAY-2</EndToEndId></Refs>
+            <Amt Ccy="EUR">200.00</Amt>
+            <RltdPties>
+              <Cdtr><Pty><Nm>Max Mustermann</Nm></Pty></Cdtr>
+              <CdtrAcct><Id><IBAN>DE42100000000001234567</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Lohn Oktober</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">49.99</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <RvslInd>true</RvslInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><DtTm>2026-10-24T09:15:00+02:00</DtTm></BookgDt>
+        <ValDt><Dt>2026-10-24</Dt></ValDt>
+        <BkTxCd><Prtry><Cd>NRTI+109+992</Cd><Issr>DK</Issr></Prtry></BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>DD-77-2026-10</EndToEndId><MndtId>M-000123</MndtId></Refs>
+            <RltdPties>
+              <Cdtr>
+                <Pty>
+                  <Nm>Beispiel Versicherung VVaG</Nm>
+                  <Id><PrvtId><Othr><Id>DE98ZZZ09999999999</Id></Othr></PrvtId></Id>
+                </Pty>
+              </Cdtr>
+            </RltdPties>
+            <RmtInf><Ustrd>Rueckgabe AC04</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Rpt>
+  </BkToCstmrAcctRpt>
+</Document>

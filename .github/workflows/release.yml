@@ -1,0 +1,98 @@
+# Container image of a release: on a release tag vX.Y.Z, run the tests for the tagged commit
+# (test.yml), then build linux/amd64 + linux/arm64 (cross-built without emulation, see the
+# Dockerfile), push it to ghcr.io/<this repository> as :vX.Y.Z — and as :latest only when the
+# tag is the highest release version — and sign it.
+#
+# Supply chain: every action is pinned to a full commit SHA (the comment names its version;
+# Dependabot proposes updates). The image carries build provenance (SLSA, mode=max) and an
+# SBOM as attestations, and is signed keylessly with cosign (Sigstore, the workflow's OIDC
+# identity): `cosign verify` in the README checks that an image was built by this workflow
+# from a release tag of this repository.
+#
+# Uses the workflow's own GITHUB_TOKEN (packages: write) and OIDC token (id-token: write,
+# for the signature only); no other secret.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0  # all release tags, to decide about :latest
+          persist-credentials: false
+
+      - name: Release version and tags
+        id: version
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "$GITHUB_REF_NAME is not a release tag vX.Y.Z" >&2
+            exit 1
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          highest="$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
+          {
+            echo "version=${GITHUB_REF_NAME#v}"
+            echo "image=$image"
+            echo "tags<<EOF"
+            echo "$image:$GITHUB_REF_NAME"
+            if [ "$highest" = "$GITHUB_REF_NAME" ]; then echo "$image:latest"; fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "highest release tag: $highest"
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Smoke test
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          target: smoke
+          pull: true
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          pull: true
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: ${{ steps.version.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=Apache-2.0
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Sign
+        env:
+          IMAGE: ${{ steps.version.outputs.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"

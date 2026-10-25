@@ -1,0 +1,7 @@
+*
+!requirements.txt
+!LICENSE
+!NOTICE
+!src/
+**/__pycache__
+**/*.py[cod]

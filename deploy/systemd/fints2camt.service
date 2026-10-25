@@ -1,0 +1,17 @@
+# /etc/systemd/system/fints2camt.service — one run of fints2camt, started by fints2camt.timer.
+# Adjust WorkingDirectory to the directory that holds docker-compose.yml, config.toml,
+# fints2camt.env and secrets/.
+
+[Unit]
+Description=fints2camt: fetch bank transactions via FinTS and deliver camt.053
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/fints2camt
+ExecStart=/usr/bin/docker compose run --rm --no-TTY fints2camt run
+# Exit 3 (approval needed) and 4 (PIN rejected) wait for the operator: the unit fails,
+# so `systemctl --failed` and the journal show it; the next runs do not contact the bank.
+TimeoutStartSec=30min
