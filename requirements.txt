@@ -404,9 +404,9 @@ lxml==6.1.3 \
     # via
     #   fints
     #   fints2camt (pyproject.toml)
-mt-940==5.1.1 \
-    --hash=sha256:8257d61811c05df80236514a85c52142aa1e8403198542a6267f75158303d9cc \
-    --hash=sha256:fa33e23e0dacd949500b485a9b3857f414ee2f76cb5478ca0724d9fcf485cbde
+mt-940==5.1.3 \
+    --hash=sha256:36d8e3fa6683600b90ce3c63016489f16c31cc7c7e003baf80d060aac876c25e \
+    --hash=sha256:bb165c60c828cfa741515caf947535d8682451a088cc06b5d81df26b5a84b851
     # via fints
 pygments==2.21.0 \
     --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9 \
