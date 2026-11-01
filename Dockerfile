@@ -18,7 +18,7 @@
 # pinned base image; it is not upgraded. fints2camt itself is pure Python and is copied, so
 # no build backend is fetched either.
 
-FROM --platform=$BUILDPLATFORM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS build
+FROM --platform=$BUILDPLATFORM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS build
 ARG TARGETARCH
 WORKDIR /build
 COPY requirements.txt LICENSE NOTICE ./
@@ -44,7 +44,7 @@ RUN set -eu; \
     echo "fints2camt:x:10001:" >> /rootfs/etc/group
 
 # The same digest as the build stage (keep both FROM lines in step).
-FROM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS runtime
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS runtime
 LABEL org.opencontainers.image.title="fints2camt" \
       org.opencontainers.image.description="Fetch bank transactions via FinTS, produce camt.053 and deliver them" \
       org.opencontainers.image.licenses="Apache-2.0"
