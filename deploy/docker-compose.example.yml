@@ -20,7 +20,7 @@ services:
   fints2camt:
     # A released version (pin it; amd64 and arm64). To build from source instead, replace this
     # line by `build: <path to a checkout of the release tag>`.
-    image: ghcr.io/extdev-gmbh/fints2camt:v0.1.1
+    image: ghcr.io/extdev-gmbh/fints2camt:v0.1.2
     command: ["run"]
     restart: "no"
     read_only: true

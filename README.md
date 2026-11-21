@@ -34,7 +34,10 @@ PIN and TAN never leave the operator's host except towards the bank.
 - **State** in a local file (last delivered booking date per account, FinTS client data, the selected
   TAN method; never the PIN). An account's date advances only after its delivery succeeded (2xx).
   Each run fetches from the last delivered date minus an overlap (default 3 days); the first run from
-  a configurable date.
+  a configurable date. Should the bank return a booked entry dated after today (a weekend fee booked on the
+  next business day), the statement period (`ToDtTm`) and the closing balance date extend to that
+  date; the state still records today, so the day is fetched again on the next run and the target
+  deduplicates the entry by its `NtryRef`.
 
 ## Security model
 
@@ -81,11 +84,11 @@ target's file names contain the full IBAN. Report vulnerabilities as described i
 ### Container (recommended)
 
 Each release is published as a container image for amd64 and arm64 (e.g. a Raspberry Pi or an
-ARM VPS) at `ghcr.io/extdev-gmbh/fints2camt`, tagged with the release (`:v0.1.1`); `:latest` is the
+ARM VPS) at `ghcr.io/extdev-gmbh/fints2camt`, tagged with the release (`:v0.1.2`); `:latest` is the
 highest release:
 
 ```sh
-docker pull ghcr.io/extdev-gmbh/fints2camt:v0.1.1
+docker pull ghcr.io/extdev-gmbh/fints2camt:v0.1.2
 ```
 
 Pin a release tag rather than `:latest`, so that a new version is installed only when you change
@@ -101,18 +104,18 @@ release workflow from a release tag (cosign ≥ 3.0 — the signature is stored 
 format, which cosign 2 does not find: "no signatures found"):
 
 ```sh
-cosign verify ghcr.io/extdev-gmbh/fints2camt:v0.1.1 \
+cosign verify ghcr.io/extdev-gmbh/fints2camt:v0.1.2 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/extdev-gmbh/fints2camt/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$'
-docker buildx imagetools inspect ghcr.io/extdev-gmbh/fints2camt:v0.1.1 --format '{{ json .Provenance }}'
+docker buildx imagetools inspect ghcr.io/extdev-gmbh/fints2camt:v0.1.2 --format '{{ json .Provenance }}'
 ```
 
 Alternatively, build the image yourself from a release tag:
 
 ```sh
 git clone https://github.com/extdev-gmbh/fints2camt.git && cd fints2camt
-git checkout v0.1.1                      # a release tag
-docker build -t fints2camt:0.1.1 .
+git checkout v0.1.2                      # a release tag
+docker build -t fints2camt:0.1.2 .
 ```
 
 It also cross-builds without emulation: `docker buildx build --platform linux/amd64,linux/arm64 ...`.

@@ -135,3 +135,98 @@ def test_identical_bookings_on_one_day_get_distinct_references() -> None:
     refs = [n.findtext("c:NtryRef", namespaces=NS) for n in root.findall(".//c:Ntry", NS)]
     assert len(refs) == 2 and refs[0] != refs[1]
     assert balances(document)["CLBD"] == ("2.00", "DBIT", "2026-10-25")
+
+
+# --- a booked entry dated after the window end (a weekend fee booked on the next business day)
+
+FORWARD_NTRY = """
+      <Ntry>
+        <Amt Ccy="EUR">6.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-10-27</Dt></BookgDt>
+        <ValDt><Dt>2026-10-27</Dt></ValDt>
+        <BkTxCd><Prtry><Cd>NCHG+805+000</Cd><Issr>DK</Issr></Prtry></BkTxCd>
+        <AddtlNtryInf>ENTGELTABSCHLUSS</AddtlNtryInf>
+      </Ntry>
+"""
+FORWARD_MT940 = (
+    ":20:STARTUMSE\n:25:37040044/0532013000\n:28C:00000/003\n:60F:C261024EUR945,00\n"
+    ":61:2610271027D6,00NCHGNONREF\n:86:Entgeltabschluss\n:62F:C261027EUR939,00\n-"
+)
+
+
+def camt_with_forward_entry() -> bytes:
+    text = fixture_text("camt052_v02_synthetic.xml")
+    marker = "    </Rpt>"
+    return text.replace(marker, FORWARD_NTRY + marker).encode("utf-8")
+
+
+def period(document: bytes) -> tuple[str, str]:
+    root = parse_xml(document)
+    return (
+        root.findtext(".//c:Stmt/c:FrToDt/c:FrDtTm", namespaces=NS),
+        root.findtext(".//c:Stmt/c:FrToDt/c:ToDtTm", namespaces=NS),
+    )
+
+
+def entry_references(document: bytes) -> dict[str, str]:
+    """``NtryRef`` per booking date and amount (unique in these fixtures)."""
+    root = parse_xml(document)
+    return {
+        f"{n.findtext('c:BookgDt/c:Dt', namespaces=NS)} {n.findtext('c:Amt', namespaces=NS)}":
+            n.findtext("c:NtryRef", namespaces=NS)
+        for n in root.findall(".//c:Ntry", NS)
+    }
+
+
+def test_camt_entry_after_the_window_end_extends_the_period(caplog) -> None:
+    caplog.set_level("INFO", logger="fints2camt.fetch")
+    source = FakeSource(camt_docs=[camt_with_forward_entry()])
+    result = fetch_statement(source, ACCOUNT, WINDOW, created=CREATED)
+    camt.validate_camt053(result.document)
+    assert result.entry_count == 3
+    assert period(result.document) == ("2026-10-21T00:00:00", "2026-10-27T23:59:59")
+    assert balances(result.document)["CLBD"] == ("1200.01", "CRDT", "2026-10-27")
+    assert result.window == WINDOW
+    # the identifiers stay keyed on the window, so a re-run of the window stays idempotent
+    plain = fetch_statement(FakeSource(camt_docs=[fixture_bytes("camt052_v02_synthetic.xml")]), ACCOUNT, WINDOW)
+    msg_id = lambda document: parse_xml(document).findtext(".//c:GrpHdr/c:MsgId", namespaces=NS)
+    assert msg_id(result.document) == msg_id(plain.document)
+    messages = [record.getMessage() for record in caplog.records if record.name == "fints2camt.fetch"]
+    assert messages == ["DE89…3000: 1 booked entries after 2026-10-25; statement period extended to 2026-10-27"]
+    assert OWN_IBAN not in caplog.text and "6.00" not in caplog.text
+
+
+def test_mt940_entry_after_the_window_end_extends_the_period() -> None:
+    text = fixture_text("mt940_synthetic.sta") + "\n" + FORWARD_MT940
+    result = fetch_statement(FakeSource(mt940_text=text), ACCOUNT, WINDOW, created=CREATED)
+    camt.validate_camt053(result.document)
+    assert result.entry_count == 6
+    assert period(result.document) == ("2026-10-21T00:00:00", "2026-10-27T23:59:59")
+    assert balances(result.document) == {
+        "OPBD": ("1000.00", "CRDT", "2026-10-21"),
+        "CLBD": ("939.00", "CRDT", "2026-10-27"),
+    }
+
+
+def test_without_later_entries_the_period_is_the_window(caplog) -> None:
+    caplog.set_level("INFO", logger="fints2camt.fetch")
+    result = fetch_statement(FakeSource(mt940_text=fixture_text("mt940_synthetic.sta")), ACCOUNT, WINDOW)
+    assert period(result.document) == ("2026-10-21T00:00:00", "2026-10-25T23:59:59")
+    assert not [record for record in caplog.records if record.name == "fints2camt.fetch"]
+
+
+@pytest.mark.parametrize("source_format", ["camt", "mt940"])
+def test_an_entry_after_the_window_end_keeps_its_reference_on_the_next_run(source_format: str) -> None:
+    def source() -> FakeSource:
+        if source_format == "camt":
+            return FakeSource(camt_docs=[camt_with_forward_entry()])
+        return FakeSource(mt940_text=fixture_text("mt940_synthetic.sta") + "\n" + FORWARD_MT940)
+
+    # the run of 25.10. and the run of the next day (its window starts again after the overlap)
+    next_day = FetchWindow(datetime.date(2026, 10, 22), datetime.date(2026, 10, 26))
+    first = entry_references(fetch_statement(source(), ACCOUNT, WINDOW).document)
+    second = entry_references(fetch_statement(source(), ACCOUNT, next_day).document)
+    assert "2026-10-27 6.00" in first
+    assert first == second

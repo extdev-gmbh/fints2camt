@@ -6,6 +6,16 @@ configuration format or the command line; such changes are listed under **Change
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-21
+
+### Fixed
+
+- A booked entry dated after today (a weekend fee the bank books on the next business day) no
+  longer makes the statement invalid: the statement period (`ToDtTm`) and the closing balance
+  date extend to the latest booking date, so targets that check the period accept the file.
+  The fetch range, the state, `MsgId`/`Stmt/Id`, the folder file name and the entry references
+  stay keyed on the fetch window; the day is fetched again on the next run.
+
 ## [0.1.1] - 2026-10-25
 
 Maintenance release of the build and the release workflow. The program, its configuration

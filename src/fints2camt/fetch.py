@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from decimal import Decimal
@@ -11,10 +12,12 @@ from typing import Literal
 from lxml import etree
 
 from . import camt, mt940
-from .config import AccountConfig, FetchFormat
+from .config import AccountConfig, FetchFormat, mask_iban
 from .errors import BankError, CamtError
 from .fints_source import BankSource
 from .model import Balance, Entry, FetchWindow, Statement, assign_entry_references
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -65,15 +68,17 @@ def fetch_statement(
         (_raw_signed_amount(element) for element in raw_entries), Decimal(0)
     )
     opening, closing = _balances(opening, closing, net, lambda: source.fetch_balance(account.iban))
+    period_end = _period_end(account.iban, window, entries, raw_entries)
 
     statement = Statement(
         iban=account.iban,
         currency=currency,
         window=window,
         opening=replace(opening, currency=opening.currency or currency, date=window.start),
-        closing=replace(closing, currency=closing.currency or currency, date=window.end),
+        closing=replace(closing, currency=closing.currency or currency, date=period_end),
         entries=entries,
         bic=bank_bic,
+        period_end=period_end,
     )
     document = camt.render_camt053(
         statement,
@@ -88,6 +93,28 @@ def fetch_statement(
         entry_count=len(entries) + len(raw_entries),
         source_format="camt" if use_camt else "mt940",
     )
+
+
+def _period_end(
+    iban: str, window: FetchWindow, entries: list[Entry], raw_entries: list[etree._Element]
+) -> datetime.date:
+    """The end of the statement period: ``window.end``, or the latest booking date if later.
+
+    A bank may answer with a booked entry dated after today (a weekend fee booked on the
+    next business day); its closing balance already contains it, so the entry stays and
+    the period is extended to cover it. The fetch range and the state keep the window.
+    """
+    dates = [entry.booking_date for entry in entries]
+    dates += [d for d in (camt.raw_entry_booking_date(element) for element in raw_entries) if d]
+    later = [d for d in dates if d > window.end]
+    if not later:
+        return window.end
+    end = max(later)
+    log.info(
+        "%s: %d booked entries after %s; statement period extended to %s",
+        mask_iban(iban), len(later), window.end, end,
+    )
+    return end
 
 
 def _net(entries: list[Entry]) -> Decimal:

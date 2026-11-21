@@ -103,7 +103,7 @@ def render_camt053(
     _sub(stmt, "CreDtTm", created_text)
     period = _sub(stmt, "FrToDt")
     _sub(period, "FrDtTm", f"{statement.window.start.isoformat()}T00:00:00")
-    _sub(period, "ToDtTm", f"{statement.window.end.isoformat()}T23:59:59")
+    _sub(period, "ToDtTm", f"{statement.to_date.isoformat()}T23:59:59")
     account = _sub(stmt, "Acct")
     _sub(_sub(account, "Id"), "IBAN", statement.iban)
     _sub(account, "Ccy", statement.currency)
@@ -151,6 +151,11 @@ def raw_entry_movement(entry: etree._Element) -> tuple[Decimal, bool]:
     """Amount and direction (credit?) of a passed-through ``Ntry`` element."""
     amount = _decimal(entry.findtext(_q("Amt")))
     return amount, entry.findtext(_q("CdtDbtInd")) == "CRDT"
+
+
+def raw_entry_booking_date(entry: etree._Element) -> datetime.date | None:
+    """Booking date of a passed-through ``Ntry`` element, falling back to its value date."""
+    return _date(_child(entry, "BookgDt")) or _date(_child(entry, "ValDt"))
 
 
 def _entry(stmt: etree._Element, entry: Entry) -> None:
@@ -481,7 +486,7 @@ def _assign_raw_references(iban: str, entries: list[etree._Element]) -> None:
 
 def _entry_from_xml(ntry: etree._Element) -> Entry:
     amount_element = _child(ntry, "Amt")
-    booking_date = _date(_child(ntry, "BookgDt")) or _date(_child(ntry, "ValDt"))
+    booking_date = raw_entry_booking_date(ntry)
     if amount_element is None or booking_date is None:
         raise CamtError("a booked entry in the bank's camt lacks its amount or booking date")
     code = BankTransactionCode(

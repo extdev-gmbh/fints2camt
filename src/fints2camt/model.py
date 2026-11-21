@@ -132,6 +132,14 @@ class Statement:
     closing: Balance
     entries: list[Entry]
     bic: str | None = None
+    period_end: datetime.date | None = None
+    """The statement period's end when a booked entry is dated after ``window.end`` (a fee
+    the bank books on the next business day); ``None`` when the period is the window."""
+
+    @property
+    def to_date(self) -> datetime.date:
+        """The last day of the statement period (``ToDtTm``): never before ``window.end``."""
+        return max(self.window.end, self.period_end) if self.period_end else self.window.end
 
 
 def assign_entry_references(iban: str, entries: Iterable[Entry]) -> None:

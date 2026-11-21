@@ -484,3 +484,22 @@ def test_check_fails_on_missing_secrets_unreachable_hosts_and_a_blocked_state(tm
     assert len(failures) == 5  # PIN, token, state, bank, target
     assert any("approval needed" in line for line in failures)
     assert output[-1] == "5 check(s) failed"
+
+
+def test_an_entry_after_today_extends_the_period_but_not_the_state(tmp_path) -> None:
+    later = (TODAY + datetime.timedelta(days=2)).strftime("%y%m%d")
+    forward = f"\n:20:STARTUMSE\n:60F:C{later}EUR945,00\n:61:{later}{later[2:]}D6,00NCHGNONREF\n:86:Fee\n:62F:C{later}EUR939,00\n-"
+    statement = fixture_text("mt940_synthetic.sta") + forward
+    config = make_config(tmp_path)
+    set_up(config)
+    target = Target(200)
+    bank = Bank(kaz_segments=[SimpleNamespace(statement_booked=statement.encode("iso-8859-1"))])
+    assert run(config, bank, target).exit_code == commands.EXIT_OK
+    body = target.bodies[0]
+    assert f"<ToDtTm>{TODAY + datetime.timedelta(days=2)}T23:59:59</ToDtTm>".encode() in body
+    state = load_state(config.state_file)
+    assert state.delivered_through == {OWN_IBAN: TODAY, OTHER_IBAN: TODAY}
+    assert (tmp_path / "out" / f"{OTHER_IBAN}_2026-10-21_{TODAY}.camt053.xml").exists()  # named after the window
+    # the next window starts at the same day as without the later entry
+    window = commands.fetch_window(state, config.accounts[0], config.fetch, TODAY + datetime.timedelta(days=1))
+    assert window.start == TODAY - datetime.timedelta(days=config.fetch.overlap_days)
