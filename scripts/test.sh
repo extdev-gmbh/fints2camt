@@ -1,7 +1,9 @@
 #!/bin/sh
 # Run the test suite in a container: python:3.12-slim, the runtime dependencies from the
 # hashed lock file requirements.txt (the versions the image ships) and pytest from the `dev`
-# extra — what the CI test jobs install. Byte-compiles src and tests, then runs pytest.
+# extra — what the CI test jobs install — plus git, which the CI test job installs too: the
+# tests of the release tooling (tests/test_public_tree.py) export and publish from their own
+# temporary repositories. Byte-compiles src and tests, then runs pytest.
 #
 # Needs nothing on the host besides Docker (the host has no pytest; never use the host's
 # python3 for the gate). Tests the checkout it is called from — the repository root or any
@@ -12,9 +14,8 @@
 #   scripts/test.sh                              # the whole gate, as in CI
 #   scripts/test.sh tests/test_smoke.py -k x     # arguments go to pytest
 #
-# The dependency image is built once per content of pyproject.toml and requirements.txt;
-# TEST_IMAGE_REBUILD=1
-# forces a fresh build. The package itself is not installed: pytest finds it via
+# The dependency image is built once per content of its Dockerfile (below), pyproject.toml
+# and requirements.txt; TEST_IMAGE_REBUILD=1 forces a fresh build. The package itself is not installed: pytest finds it via
 # `pythonpath = ["src"]` (pyproject.toml), so the read-only checkout is what is tested.
 set -eu
 
@@ -25,14 +26,10 @@ if [ -z "$checkout" ] || [ ! -f "$checkout/pyproject.toml" ]; then
     checkout="$script_root"
 fi
 
-fingerprint="$(cat "$checkout/pyproject.toml" "$checkout/requirements.txt" | sha256sum | cut -c1-16)"
-image="fints2camt-test:$fingerprint"
-
-build() {
-    context="$(mktemp -d)"
-    cp "$checkout/pyproject.toml" "$checkout/requirements.txt" "$context/"
-    cat > "$context/Dockerfile" <<'DOCKERFILE'
+dockerfile="$(cat <<'DOCKERFILE'
 FROM python:3.12-slim
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends git >/dev/null \
+    && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml requirements.txt /tmp/
 RUN python - <<'PY' > /tmp/dev-requirements.txt
 import tomllib
@@ -42,6 +39,17 @@ PY
 RUN pip install --no-cache-dir --disable-pip-version-check --require-hashes --no-deps -r /tmp/requirements.txt \
     && pip install --no-cache-dir --disable-pip-version-check -r /tmp/dev-requirements.txt
 DOCKERFILE
+)"
+
+# A changed Dockerfile is a new image tag, so existing images are rebuilt without asking.
+fingerprint="$(printf '%s\n' "$dockerfile" | cat - "$checkout/pyproject.toml" "$checkout/requirements.txt" \
+    | sha256sum | cut -c1-16)"
+image="fints2camt-test:$fingerprint"
+
+build() {
+    context="$(mktemp -d)"
+    cp "$checkout/pyproject.toml" "$checkout/requirements.txt" "$context/"
+    printf '%s\n' "$dockerfile" > "$context/Dockerfile"
     docker build --quiet "$@" --tag "$image" "$context" >/dev/null
     rm -rf "$context"
 }

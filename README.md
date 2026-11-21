@@ -81,11 +81,11 @@ target's file names contain the full IBAN. Report vulnerabilities as described i
 ### Container (recommended)
 
 Each release is published as a container image for amd64 and arm64 (e.g. a Raspberry Pi or an
-ARM VPS) at `ghcr.io/extdev-gmbh/fints2camt`, tagged with the release (`:v0.1.0`); `:latest` is the
+ARM VPS) at `ghcr.io/extdev-gmbh/fints2camt`, tagged with the release (`:v0.1.1`); `:latest` is the
 highest release:
 
 ```sh
-docker pull ghcr.io/extdev-gmbh/fints2camt:v0.1.0
+docker pull ghcr.io/extdev-gmbh/fints2camt:v0.1.1
 ```
 
 Pin a release tag rather than `:latest`, so that a new version is installed only when you change
@@ -97,21 +97,22 @@ command `run`. Every input of the build is pinned: the base image by digest, all
 
 Each image is signed (keyless, [Sigstore cosign](https://docs.sigstore.dev/)) by the release workflow
 and carries its build provenance and an SBOM. To check that an image was built by this repository's
-release workflow from a release tag:
+release workflow from a release tag (cosign ≥ 3.0 — the signature is stored in the Sigstore bundle
+format, which cosign 2 does not find: "no signatures found"):
 
 ```sh
-cosign verify ghcr.io/extdev-gmbh/fints2camt:v0.1.0 \
+cosign verify ghcr.io/extdev-gmbh/fints2camt:v0.1.1 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --certificate-identity-regexp '^https://github\.com/extdev-gmbh/fints2camt/\.github/workflows/release\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$'
-docker buildx imagetools inspect ghcr.io/extdev-gmbh/fints2camt:v0.1.0 --format '{{ json .Provenance }}'
+docker buildx imagetools inspect ghcr.io/extdev-gmbh/fints2camt:v0.1.1 --format '{{ json .Provenance }}'
 ```
 
 Alternatively, build the image yourself from a release tag:
 
 ```sh
 git clone https://github.com/extdev-gmbh/fints2camt.git && cd fints2camt
-git checkout v0.1.0                      # a release tag
-docker build -t fints2camt:0.1.0 .
+git checkout v0.1.1                      # a release tag
+docker build -t fints2camt:0.1.1 .
 ```
 
 It also cross-builds without emulation: `docker buildx build --platform linux/amd64,linux/arm64 ...`.
@@ -284,17 +285,39 @@ Treat it like a credential of your organisation: do not publish it.
 ## Versions and releases
 
 fints2camt uses [semantic versions](https://semver.org/); release tags are `vX.Y.Z`, and the changes
-of each version are listed in [CHANGELOG.md](CHANGELOG.md). Until 1.0.0 a minor version may change
-the configuration or the command line. Updating means changing the image tag in `docker-compose.yml`
-(or checking out the new tag and rebuilding the image) — nothing updates itself.
+of each version are listed in [CHANGELOG.md](CHANGELOG.md) under a heading with the release date
+(`## [X.Y.Z] - YYYY-MM-DD`; a version is tagged only once its section is dated). Until 1.0.0 a
+minor version may change the configuration or the command line. Updating means changing the image
+tag in `docker-compose.yml` (or checking out the new tag and rebuilding the image) — nothing updates
+itself.
+
+Each release arrives in this repository as one commit "Release vX.Y.Z" on `main` and then, in a
+separate push, its tag `vX.Y.Z`; the tag starts the release workflow (`.github/workflows/release.yml`:
+tests, image, signature). Should GitHub not start it for a tag, start it by hand: Actions → release →
+Run workflow, choose the tag under "Use workflow from" and enter the same tag as `tag`. The workflow
+refuses anything but an existing release tag run on that tag itself, so the image and its signature
+are the same as from the push.
+
+### Maintenance
 
 Development: `scripts/test.sh` runs the tests in a `python:3.12-slim` container (needs only Docker);
 GitHub Actions runs them on every push and pull request, and before every release build. Tests use
 synthetic statements and mocked FinTS dialogs only. `requirements.txt` is the hashed lock file of
 the runtime dependencies; after a change of the dependencies in `pyproject.toml`, regenerate it with
 pip-tools (`pip-compile --generate-hashes --strip-extras --no-emit-index-url
---output-file=requirements.txt pyproject.toml`, Python 3.12 on Linux). Dependabot proposes updates
-of the dependencies, the base image and the actions.
+--output-file=requirements.txt pyproject.toml`, Python 3.12 on Linux; for a single package add
+`--upgrade-package <name>==<version>`). The tests check that every locked version satisfies the
+requirements of the other locked packages, because the hashed install (`--no-deps`) does not.
+
+Updates: Dependabot (`.github/dependabot.yml`) proposes updates of the dependencies, the base image
+and the actions as pull requests in this repository. They are the signal, not the way in: this
+repository is written only by the release publication (one commit per release), so a pull request
+is never merged here. Each update is applied in the development repository — an action pinned to the
+commit SHA of its new release with the version as a comment, the lock file regenerated with hashes,
+the release notes of a major version read for changes of inputs, defaults and runtime — and is
+published with the next release. The pull request is then closed with a comment naming that
+release; an update that cannot be applied (e.g. a version another dependency excludes) is closed
+with the reason.
 
 ## Einrichtung in fünf Schritten
 

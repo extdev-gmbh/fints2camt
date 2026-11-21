@@ -4,7 +4,34 @@ All notable changes to fints2camt are listed here. The project follows
 [Semantic Versioning](https://semver.org/): until 1.0.0 a minor version may change the
 configuration format or the command line; such changes are listed under **Changed**.
 
-## [0.1.0] - unreleased
+## [Unreleased]
+
+## [0.1.1] - 2026-10-25
+
+Maintenance release of the build and the release workflow. The program, its configuration
+and its runtime dependencies are unchanged.
+
+### Added
+
+- The release workflow can be started by hand for an existing release tag
+  (`workflow_dispatch`), should GitHub not start it for a pushed tag.
+- The tests check that the lock file satisfies the requirements of every locked package (the
+  hashed install with `--no-deps` does not).
+
+### Changed
+
+- Release and test workflows: `actions/checkout` 7.0.1, `actions/setup-python` 7.1.0,
+  `docker/setup-buildx-action` 4.4.1, `docker/build-push-action` 7.4.0, `docker/login-action`
+  4.6.0 (Node 24 runtime; each pinned to its commit SHA).
+- `enum-tools` stays at 0.12.0: `python-fints` 5.0.1 requires `enum-tools~=0.12.0`.
+- A release arrives on GitHub as the release commit and then its tag in a separate push.
+
+### Fixed
+
+- README: `cosign verify` needs cosign 3.0 or newer (cosign 2 does not find the signature).
+- The 0.1.0 section of this changelog is dated.
+
+## [0.1.0] - 2026-10-25
 
 First release.
 

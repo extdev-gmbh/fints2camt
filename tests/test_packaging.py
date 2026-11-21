@@ -2,7 +2,10 @@
 
 import re
 import tomllib
+from importlib import metadata
 from pathlib import Path
+
+from packaging.requirements import Requirement
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -49,3 +52,28 @@ def test_the_image_is_built_from_the_lock_file_on_a_base_image_pinned_by_digest(
     assert len(set(external)) == 1
     assert "--require-hashes --no-deps -r requirements.txt" in dockerfile
     assert "--upgrade pip" not in dockerfile
+
+
+def test_the_locked_versions_satisfy_the_requirements_of_the_locked_packages() -> None:
+    # The hashed install (--no-deps) resolves nothing, so a lock file that breaks a requirement
+    # of a locked package (e.g. an update of a transitive dependency beyond what its dependent
+    # allows) would install and ship silently. The test environment holds the locked packages;
+    # `packaging` comes with pytest.
+    locked = {name: version for name, (version, _hashes) in _locked().items()}
+    problems: list[str] = []
+    for name, version in locked.items():
+        installed = metadata.version(name)
+        if installed != version:
+            # e.g. `pip install ".[dev]"` replaced a locked version that a dependent excludes
+            problems.append(f"{name}: locked {version}, installed {installed}")
+            continue
+        for line in metadata.requires(name) or []:
+            requirement = Requirement(line)
+            if requirement.marker is not None and not requirement.marker.evaluate({"extra": ""}):
+                continue
+            dependency = _name(requirement.name)
+            if dependency not in locked:
+                problems.append(f"{name} requires {dependency}, which is not locked")
+            elif not requirement.specifier.contains(locked[dependency], prereleases=True):
+                problems.append(f"{name} requires {line}, locked is {locked[dependency]}")
+    assert problems == []
