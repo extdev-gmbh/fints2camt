@@ -12,13 +12,13 @@
 #   docker buildx build --platform linux/amd64,linux/arm64 .
 #
 # Reproducible inputs: the base image is pinned by digest (the multi-arch index of
-# python:3.12-slim; Dependabot proposes updates), and every dependency, transitive ones
+# python:3.15-slim; Dependabot proposes updates), and every dependency, transitive ones
 # included, is installed from requirements.txt by exact version and hash
 # (--require-hashes --no-deps: nothing is resolved at build time). pip is the one of the
 # pinned base image; it is not upgraded. fints2camt itself is pure Python and is copied, so
 # no build backend is fetched either.
 
-FROM --platform=$BUILDPLATFORM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS build
+FROM --platform=$BUILDPLATFORM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS build
 ARG TARGETARCH
 WORKDIR /build
 COPY requirements.txt LICENSE NOTICE ./
@@ -31,7 +31,7 @@ RUN set -eu; \
     esac; \
     pip install --no-cache-dir --no-compile --disable-pip-version-check --target /app \
         --require-hashes --no-deps -r requirements.txt \
-        --only-binary=:all: --implementation cp --python-version 3.12 \
+        --only-binary=:all: --implementation cp --python-version 3.15 \
         --platform "manylinux2014_$arch" --platform "manylinux_2_17_$arch" \
         --platform "manylinux_2_28_$arch"; \
     cp -r src/fints2camt /app/fints2camt; \
@@ -44,7 +44,7 @@ RUN set -eu; \
     echo "fints2camt:x:10001:" >> /rootfs/etc/group
 
 # The same digest as the build stage (keep both FROM lines in step).
-FROM python:3.12-slim@sha256:a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704 AS runtime
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS runtime
 LABEL org.opencontainers.image.title="fints2camt" \
       org.opencontainers.image.description="Fetch bank transactions via FinTS, produce camt.053 and deliver them" \
       org.opencontainers.image.licenses="Apache-2.0"

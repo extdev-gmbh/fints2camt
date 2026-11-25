@@ -303,12 +303,12 @@ are the same as from the push.
 
 ### Maintenance
 
-Development: `scripts/test.sh` runs the tests in a `python:3.12-slim` container (needs only Docker);
+Development: `scripts/test.sh` runs the tests in a `python:3.15-slim` container (needs only Docker);
 GitHub Actions runs them on every push and pull request, and before every release build. Tests use
 synthetic statements and mocked FinTS dialogs only. `requirements.txt` is the hashed lock file of
 the runtime dependencies; after a change of the dependencies in `pyproject.toml`, regenerate it with
 pip-tools (`pip-compile --generate-hashes --strip-extras --no-emit-index-url
---output-file=requirements.txt pyproject.toml`, Python 3.12 on Linux; for a single package add
+--output-file=requirements.txt pyproject.toml`, Python 3.15 on Linux; for a single package add
 `--upgrade-package <name>==<version>`). The tests check that every locked version satisfies the
 requirements of the other locked packages, because the hashed install (`--no-deps`) does not.
 

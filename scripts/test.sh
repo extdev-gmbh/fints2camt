@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run the test suite in a container: python:3.12-slim, the runtime dependencies from the
+# Run the test suite in a container: python:3.15-slim, the runtime dependencies from the
 # hashed lock file requirements.txt (the versions the image ships) and pytest from the `dev`
 # extra — what the CI test jobs install — plus git, which the CI test job installs too: the
 # tests of the release tooling (tests/test_public_tree.py) export and publish from their own
@@ -27,7 +27,7 @@ if [ -z "$checkout" ] || [ ! -f "$checkout/pyproject.toml" ]; then
 fi
 
 dockerfile="$(cat <<'DOCKERFILE'
-FROM python:3.12-slim
+FROM python:3.15-slim
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends git >/dev/null \
     && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml requirements.txt /tmp/

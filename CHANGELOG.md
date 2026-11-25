@@ -6,6 +6,20 @@ configuration format or the command line; such changes are listed under **Change
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-22
+
+Maintenance release of the dependencies, the base image and the release workflow. The
+program and its configuration are unchanged.
+
+### Changed
+
+- Container base image `python:3.15-slim` (was `python:3.12-slim`, pinned by digest); the
+  tests run on Python 3.15 too (`scripts/test.sh`, GitLab CI, GitHub Actions). Python 3.12 or
+  newer remains the requirement for an installation outside the image.
+- Runtime dependencies: `mt-940` 5.1.3, `anyio` 4.16.0 (lock file regenerated with hashes).
+- Release workflow: `docker/login-action` 4.8.0 (pinned to its commit SHA).
+- `enum-tools` stays at 0.12.0: `python-fints` 5.0.1 requires `enum-tools~=0.12.0`.
+
 ## [0.1.2] - 2026-11-21
 
 ### Fixed

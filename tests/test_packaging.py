@@ -1,6 +1,7 @@
 """The pinned build inputs: the hashed lock file and the base image of the Dockerfile."""
 
 import re
+import sys
 import tomllib
 from importlib import metadata
 from pathlib import Path
@@ -48,8 +49,12 @@ def test_the_image_is_built_from_the_lock_file_on_a_base_image_pinned_by_digest(
     bases = re.findall(r"^FROM (?:--platform=\S+ )?(\S+) AS", dockerfile, re.MULTILINE)
     external = [base for base in bases if ":" in base]
     assert len(external) == 2
-    assert all(re.fullmatch(r"python:3\.12-slim@sha256:[0-9a-f]{64}", base) for base in external)
+    assert all(re.fullmatch(r"python:3\.\d+-slim@sha256:[0-9a-f]{64}", base) for base in external)
     assert len(set(external)) == 1
+    # The tests run on the image's Python (scripts/test.sh, CI), and the wheels are fetched for it.
+    image_python = external[0].removeprefix("python:").split("-slim@")[0]
+    assert image_python == f"{sys.version_info.major}.{sys.version_info.minor}"
+    assert f"--python-version {image_python} " in dockerfile
     assert "--require-hashes --no-deps -r requirements.txt" in dockerfile
     assert "--upgrade pip" not in dockerfile
 

@@ -22,7 +22,7 @@ own licenses:
 Their transitive dependencies (among others mt-940, sepaxml, requests, certifi, bleach,
 text-unidecode) carry their own licenses, listed in each package's metadata
 (`pip show --verbose <package>`). The container image additionally contains the Debian
-and Python base image (python:3.12-slim) with its own licenses.
+and Python base image (python:3.15-slim) with its own licenses.
 
 The camt.053.001.02 XML schema in src/fints2camt/schemas/ is the ISO 20022 message
 definition published by ISO 20022 / SWIFT, included unmodified for validation.
